@@ -43,7 +43,7 @@ test("cron merges both boards in date order with stable GUIDs", async (t) => {
   assert.ok(requests.every(({ options }) => !options.headers.Cookie && !options.headers.Authorization));
   assert.equal((xml.match(/<item>/g) ?? []).length, 2);
   assert.ok(xml.indexOf("articles/20035") < xml.indexOf("articles/19877"));
-  assert.match(xml, /\[방송일정\] \[오늘의 방송\]261013 \/ 18:15/);
+  assert.match(xml, /<title>\[방송일정\] 261013 \/ 18:15<\/title>/);
   assert.match(xml, /<category>공지사항<\/category>/);
   assert.match(xml, /<guid isPermaLink="true">https:\/\/cafe\.naver\.com\/f-e\/cafes\/31151120\/articles\/20035<\/guid>/);
   assert.match(xml, /Tue, 13 Oct 2026 08:38:47 GMT/);
@@ -54,6 +54,26 @@ test("cron merges both boards in date order with stable GUIDs", async (t) => {
   assert.equal(await response.text(), xml);
   assert.equal(requests.length, 2, "serving stored RSS must not request Naver again");
 });
+
+for (const [label, overrides, expected] of [
+  ["daily schedule", { headName: "오늘의 일정" }, "261013 / 18:15"],
+  ["weekly schedule", { headName: "주간 일정", subject: "10월 2주차 주간 일정" }, "10월 2주차 주간 일정"],
+  ["literal subject prefix", { headName: undefined, subject: "[주간 일정] 10월 2주차" }, "10월 2주차"],
+  ["repeated schedule prefixes", { headName: "오늘의 방송", subject: "[오늘의 일정] 261013 / 18:15" }, "261013 / 18:15"],
+  ["unrelated heading", { headName: "중요", subject: "방송 안내" }, "[중요]방송 안내"],
+  ["label inside subject", { headName: undefined, subject: "변경된 [주간 일정] 확인" }, "변경된 [주간 일정] 확인"],
+]) {
+  test(`${label}: removes only leading schedule labels`, async (t) => {
+    const { env, values } = setup(t, (menuId) => ({ result: { articleList: [
+      article(menuId, menuId === 8 ? overrides : {}),
+    ] } }));
+    await worker.scheduled({}, env);
+    const xml = values.get("rss.xml");
+    assert.ok(xml.includes(`<title>[방송일정] ${expected}</title>`));
+    assert.match(xml, /<title>\[공지사항\] 한글날 공지<\/title>/);
+    assert.match(xml, /Tue, 13 Oct 2026 08:38:47 GMT/);
+  });
+}
 
 test("XML escaping, duplicate IDs and non-public posts", async (t) => {
   const { env, values } = setup(t, (menuId) => ({ result: { articleList: [

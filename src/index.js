@@ -42,8 +42,10 @@ async function loadBoard(board) {
       || Number.isNaN(new Date(article.writeDateTimestamp).getTime())) {
       throw new Error(`${board.name}: 게시글 데이터가 올바르지 않습니다.`);
     }
+    const title = `${article.headName ? `[${article.headName}]` : ""}${article.subject.trim()}`
+      .replace(/^(?:\[(?:오늘의 일정|오늘의 방송|주간 일정)\]\s*)+/, "");
     return {
-      title: `[${board.name}] ${article.headName ? `[${article.headName}]` : ""}${article.subject.trim()}`,
+      title: `[${board.name}] ${title}`,
       link: `https://cafe.naver.com/f-e/cafes/${CAFE_ID}/articles/${article.articleId}`,
       category: board.name,
       author: article.writerInfo.nickName,
