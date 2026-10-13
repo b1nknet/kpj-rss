@@ -1,0 +1,14 @@
+{
+  "name": "ncafe-rss",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=22" },
+  "scripts": {
+    "dev": "wrangler dev --test-scheduled",
+    "test": "node --test",
+    "check": "wrangler deploy --dry-run --outdir work/build",
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": { "wrangler": "4.149.0" }
+}
